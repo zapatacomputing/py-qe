@@ -3,12 +3,14 @@ import pandas as pd
 from flatten_json import flatten
 from sqlalchemy import create_engine
 import json
+from pyqe._sql import get_db_conn_str
 
 def extract_lists(item, dataset, path=None, index_buffer=(), parent_id=None):
     if isinstance(item, dict):
         if item.get('id'):
             parent_id = item['id']
         
+        # Check if the item is a dict inside of a list
         if len(index_buffer) > 0:
             dataset[path].append(item)
 
@@ -74,8 +76,7 @@ def extract_dataframes(workflowresult):
     return dfs
 
 def send_workflowresult_to_sql(workflowresult):
-    db_string = 'postgres://maxradin:@localhost:5433/hydrogen_qe'
-    engine = create_engine(db_string)
+    engine = create_engine(get_db_conn_str())
     dfs = extract_dataframes(workflowresult)
     for table_name in dfs:
         dfs[table_name].to_sql(table_name, con=engine, if_exists='replace')

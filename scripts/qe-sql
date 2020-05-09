@@ -1,0 +1,44 @@
+import argparse
+from pyqe import set_configuration, get_configuration
+import json
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    subparsers = parser.add_subparsers(help='sub-command help')
+
+    config_parser = subparsers.add_parser('set-config', help='config help')
+    config_parser.add_argument('user', type=str, help='the username')
+    config_parser.add_argument('database', type=str, help='the database name')
+    config_parser.add_argument('--url', type=str, default='localhost', help='the SQL server URL')
+    config_parser.add_argument('--port', type=str, default='5432', help='the SQL server port')
+    config_parser.add_argument('--password', type=str, default='', help='the password')
+    config_parser.set_defaults(func=set_configuration_command)
+
+
+    show_config_parser = subparsers.add_parser('show-config', help='config help')
+    show_config_parser.set_defaults(func=show_configuration_command)
+
+    args = parser.parse_args()
+    print(args)
+    args.func(args)
+
+def set_configuration_command(args):
+    configuration = {
+        'user': args.user,
+        'database': args.database,
+        'url': args.url,
+        'port': args.port,
+        'password': args.password
+    }
+    set_configuration(configuration)
+
+def show_configuration_command(args):
+
+    config = get_configuration()
+    if config:
+        print(json.dumps(config, indent=2))
+    else:
+        print('SQL connection not configured.')
+
+if __name__ == '__main__':
+    parse_arguments()
