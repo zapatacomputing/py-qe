@@ -54,6 +54,15 @@ def extract_dataframes(workflowresult):
     dfs = {}
     for table_name in super_dict:
         dict_flattened = (flatten(item, '.') for item in super_dict[table_name])
+        for item in dict_flattened:
+            to_pop = []
+            for key in item:
+                if isinstance(item[key], dict):
+                    if len(item[key]) == 0:
+                        to_pop.append(key)
+            for key in to_pop:
+                item.pop(key)
+
         dfs[table_name] = pd.DataFrame(dict_flattened)
     return dfs
 
@@ -62,4 +71,4 @@ def send_workflowresult_to_sql(workflowresult):
     engine = create_engine(db_string)
     dfs = extract_dataframes(workflowresult)
     for task_class in dfs:
-        dfs[task_class].to_sql(task_class, con=engine)
+        dfs[task_class].to_sql(task_class, con=engine, if_exists='replace')
