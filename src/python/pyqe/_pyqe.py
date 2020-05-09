@@ -4,8 +4,11 @@ from flatten_json import flatten
 from sqlalchemy import create_engine
 import json
 
-def extract_lists(item, dataset, path=None, index_buffer=(), parent=None):
+def extract_lists(item, dataset, path=None, index_buffer=(), parent_id=None):
     if isinstance(item, dict):
+        if item.get('id'):
+            parent_id = item['id']
+        
         if len(index_buffer) > 0:
             dataset[path].append(item)
 
@@ -15,7 +18,7 @@ def extract_lists(item, dataset, path=None, index_buffer=(), parent=None):
                 new_path = path + '.' + key
             else:
                 new_path = key
-            extract_lists(item[key], dataset, new_path, (), item)
+            extract_lists(item[key], dataset, new_path, (), parent_id)
             if isinstance(item[key], list):
                 to_pop.append(key)
         for key in to_pop:
@@ -25,12 +28,12 @@ def extract_lists(item, dataset, path=None, index_buffer=(), parent=None):
         if not dataset.get(path):
             dataset[path] = []
         for index, child in enumerate(item):
-            extract_lists(child, dataset, path, index_buffer + (index,), parent)
+            extract_lists(child, dataset, path, index_buffer + (index,), parent_id)
 
     elif len(index_buffer) > 0:
         item_as_dict = {'value': item}
         item_as_dict.update({f'index_{i}': j for i, j in enumerate(index_buffer)})     
-        item_as_dict['parentId'] = parent.get('id')   
+        item_as_dict['parentId'] = parent_id
         dataset[path].append(item_as_dict)
 
 def get_class_dict(workflowresult):
