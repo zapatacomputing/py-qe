@@ -79,4 +79,4 @@ def send_workflowresult_to_sql(workflowresult):
     engine = create_engine(get_db_conn_str())
     dfs = extract_dataframes(workflowresult)
     for table_name in dfs:
-        dfs[table_name].to_sql(table_name, con=engine, if_exists='replace')
+        dfs[table_name].to_sql(table_name, con=engine, if_exists='append')

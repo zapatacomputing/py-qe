@@ -8,7 +8,9 @@ def parse_arguments():
     subparsers = parser.add_subparsers(help='sub-command help')
     parser.set_defaults(func=None)
 
-    config_parser = subparsers.add_parser('set-config', help='Configure SQL connection.')
+    config_parser = subparsers.add_parser('set-config',
+        help='Configure SQL connection.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     config_parser.add_argument('user', type=str, help='the username')
     config_parser.add_argument('database', type=str, help='the database name')
     config_parser.add_argument('--url', type=str, default='localhost', help='the SQL server URL')
