@@ -2,6 +2,7 @@ from pandas.io.json import json_normalize
 import pandas as pd
 from flatten_json import flatten
 from sqlalchemy import create_engine
+import json
 
 def extract_lists(item, dataset, path=None, index_buffer=(), parent=None):
     if isinstance(item, dict):
@@ -45,7 +46,9 @@ def get_class_dict(workflowresult):
 def get_super_dict(workflowresult):
     super_dict = get_class_dict(workflowresult)
     children = {}
-    extract_lists(super_dict, children)
+    for class_name in super_dict:
+        for step in super_dict[class_name]:
+            extract_lists(step, children)
     super_dict.update(children)
     return super_dict
 
@@ -53,7 +56,8 @@ def extract_dataframes(workflowresult):
     super_dict = get_super_dict(workflowresult)
     dfs = {}
     for table_name in super_dict:
-        dict_flattened = (flatten(item, '.') for item in super_dict[table_name])
+        dict_flattened = list((flatten(item, '.') for item in super_dict[table_name]))
+
         for item in dict_flattened:
             to_pop = []
             for key in item:
@@ -70,5 +74,5 @@ def send_workflowresult_to_sql(workflowresult):
     db_string = 'postgres://maxradin:@localhost:5433/hydrogen_qe'
     engine = create_engine(db_string)
     dfs = extract_dataframes(workflowresult)
-    for task_class in dfs:
-        dfs[task_class].to_sql(task_class, con=engine, if_exists='replace')
+    for table_name in dfs:
+        dfs[table_name].to_sql(table_name, con=engine, if_exists='replace')
