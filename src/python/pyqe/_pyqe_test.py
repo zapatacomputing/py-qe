@@ -33,18 +33,18 @@ class TestPyqe(unittest.TestCase):
 
         print(json.dumps(children, indent=2))
 
-        self.assertTrue(len(children['two_dimensional_array']), 8)
+        self.assertEqual(len(children['two_dimensional_array']), 12)
         self.assertFalse(self.workflowresult["step-1"].get('two_dimensional_array'))
         self.assertFalse(self.workflowresult["step-2"].get('two_dimensional_array'))
 
-        self.assertTrue(len(children['one_dimensional_array']), 6)
+        self.assertEqual(len(children['one_dimensional_array']), 6)
         self.assertFalse(self.workflowresult["step-1"].get('one_dimensional_array'))
         self.assertFalse(self.workflowresult["step-2"].get('one_dimensional_array'))
 
         self.assertEqual(self.workflowresult["step-1"]['scalar'], 1)
         self.assertEqual(self.workflowresult["step-2"]['scalar'], 1)
 
-        self.assertTrue(len(children['list_of_dicts']), 4)
+        self.assertEqual(len(children['list_of_dicts']), 4)
         self.assertFalse(self.workflowresult["step-1"].get('list_of_dicts'))
         self.assertFalse(self.workflowresult["step-2"].get('list_of_dicts'))
 
@@ -60,6 +60,19 @@ class TestPyqe(unittest.TestCase):
         for key in ('class-A', 'class-B', 'one_dimensional_array',
                 'two_dimensional_array', 'list_of_dicts'):
             self.assertIn(key, super_dict)
+    
+    def test_extract_dataframes(self):
+        dataframes = extract_dataframes(self.workflowresult)
+        self.assertEqual(len(dataframes), 5)
+        self.assertEqual(len(dataframes['class-A'].index), 1)
+        self.assertEqual(len(dataframes['class-B'].index), 1)
+        self.assertEqual(len(dataframes['one_dimensional_array'].index), 6)
+        self.assertEqual(len(dataframes['two_dimensional_array'].index), 12)
+        self.assertEqual(len(dataframes['list_of_dicts'].index), 4)
+
+    def test_ci_skip_send_workflowresult_to_sql(self):
+        # This test requires you to have configured the SQL backend.
+        send_workflowresult_to_sql(self.workflowresult)
 
 if __name__ == '__main__':
     unittest.main()
