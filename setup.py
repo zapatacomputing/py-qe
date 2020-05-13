@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.1.0",
     author="Zapata Computing, Inc.",
     author_email="info@zapatacomputing.com",
-    description="Python interface for Quantum Engine",
+    description="Supporting utilities for analyzing data from Quantum Engine workflows.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/zapatacomputing/zmachine",
