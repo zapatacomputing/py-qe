@@ -151,7 +151,8 @@ def extract_dataframes(workflowresult):
         dfs[table_name] = pd.DataFrame(dict_flattened)
         # Esthetic changes imitating MongoDB behaviour
         if 'id' in dfs[table_name].columns:
-            dfs[table_name].set_index('id', inplace=True)
+            dfs[table_name].rename(columns={'id': '_id'}, inplace=True)
+            dfs[table_name].set_index('_id', inplace=True)
         else:
             dfs[table_name].index.name = '_id'
 
