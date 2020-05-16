@@ -35,16 +35,26 @@ def extract_lists(item, dataset, path=None, index_buffer=(), parent_id=None):
         # Recursively extract lists from all of the item's values.
         to_pop = []
         for key in item:
+            schema = None
+            path_addition = key
+            if isinstance(item[key], dict) and item[key].get('schema'):
+                schema = item[key]['schema']
+                path_addition = schema
             if path:
-                new_path = path + '.' + key
+                new_path = path + '.' + path_addition
             else:
-                new_path = key
+                new_path = path_addition
             extract_lists(item[key], dataset, new_path, (), parent_id)
             if isinstance(item[key], list):
                 to_pop.append(key)
+            elif schema is not None:
+                if not dataset.get(schema):
+                    dataset[schema] = []
+                dataset[schema].append(item[key])
+                to_pop.append(key)
         
-        # Remove any keys whose values were lists because those lists have been
-        # extracted.
+        # Remove any keys whose values were lists or output artifacts because those
+        # have been extracted.
         for key in to_pop:
                 item.pop(key)
 
@@ -138,8 +148,14 @@ def extract_dataframes(workflowresult):
                         to_pop.append(key)
             for key in to_pop:
                 item.pop(key)
-
         dfs[table_name] = pd.DataFrame(dict_flattened)
+        # Esthetic changes imitating MongoDB behaviour
+        if 'id' in dfs[table_name].columns:
+            dfs[table_name].rename(columns={'id': '_id'}, inplace=True)
+            dfs[table_name].set_index('_id', inplace=True)
+        else:
+            dfs[table_name].index.name = '_id'
+
     return dfs
 
 def send_workflowresult_to_sql(workflowresult):

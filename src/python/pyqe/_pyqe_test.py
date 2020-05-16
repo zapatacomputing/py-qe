@@ -74,6 +74,39 @@ class TestPyqe(unittest.TestCase):
         # This test requires you to have configured the SQL backend.
         send_workflowresult_to_sql(self.workflowresult)
 
+    def test_output_artifacts(self):
+
+        task_data = {
+                "class": "get-expectation-values-from-rdms",
+                "expectations": {
+                    "covariances": [ {"id": "qe"}, {"id": "we"} ],
+                    "id": "h2-nrepr-purif-v2-9xhzg-2941914382/expectations",
+                    "expectation_values": {
+                        "real": [
+                            -0.889743677639184,
+                            -0.8897353171358477,
+                        ]
+                    },
+                    "schema": "io-zapOS-v1alpha1-expectation_values",
+                    "taskClass": "get-expectation-values-from-rdms",
+                    "taskId": "h2-nrepr-purif-v2-9xhzg-2941914382",
+                    "workflowId": "h2-nrepr-purif-v2-9xhzg"
+                },
+                "id": "h2-nrepr-purif-v2-9xhzg-2941914382",
+            }
+        children = {}
+        extract_lists(task_data, children)
+
+        print(json.dumps(children, indent=2))
+
+        self.assertEqual(len(task_data), 2)
+        self.assertEqual(len(children), 3)
+
+        self.assertEqual(len(children['io-zapOS-v1alpha1-expectation_values.expectation_values.real']), 2)
+        self.assertFalse(task_data.get('expectations'))
+
+        self.assertEqual(len(children['io-zapOS-v1alpha1-expectation_values.covariances']), 2)
+
 if __name__ == '__main__':
     unittest.main()
 
