@@ -5,7 +5,7 @@ Engine server.
 
 ## Installation
 
-Run `pip install .`.
+Run `pip install -e .`.
 
 ## Setup Postgres database
 
