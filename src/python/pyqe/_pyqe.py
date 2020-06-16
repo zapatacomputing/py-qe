@@ -6,6 +6,7 @@ from flatten_json import flatten
 from sqlalchemy import create_engine
 import json
 from pyqe._sql import get_db_conn_str
+import copy
 
 def extract_lists(item, dataset, path=None, index_buffer=(), parent_id=None):
     """Recursively extract lists from a dict and add them to a separate dict.
@@ -170,3 +171,31 @@ def send_workflowresult_to_sql(workflowresult):
     dfs = extract_dataframes(workflowresult)
     for table_name in dfs:
         dfs[table_name].to_sql(table_name, con=engine, if_exists='append')
+
+
+def build_workflow_tree(workflowresult, task_class):
+    """
+
+    Args:
+        workflowresult (dict): A Quantum Engine workflowresult dict.
+        task_classes (list): A list of strings indicating which task classes to
+            include output artifacts from.
+    
+    Returns:
+        pandas.DataFrame: The joined results from the workflow.
+    """
+
+    workflowresult = copy.deepcopy(workflowresult)
+    steps = get_class_dict(workflowresult)[task_class]
+    for step_id, step in workflowresult.items():
+        for key, value in step.items():
+            if key.split(':')[0] == 'inputArtifact':
+                print(key)
+                creator_id = value.split('/')[0]
+                output_artifact_name = value.split('/')[1]
+                step[key] = workflowresult[creator_id][output_artifact_name]
+                print(step[key])
+                step[key]['creator'] = workflowresult[creator_id]
+            
+    return workflowresult
+
