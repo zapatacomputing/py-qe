@@ -24,6 +24,8 @@ def parse_arguments():
 
     upload_parser = subparsers.add_parser('upload', help='Upload workflow result to SQL connection.')
     upload_parser.add_argument('file', type=str, help='the workflowresult JSON file to process')
+    upload_parser.add_argument('--csv', action='store_true', help='Exports to csv files instead of SQL DB')
+    upload_parser.add_argument('--excel', action='store_true', help='Exports to single Excel file instead of SQL DB')
     upload_parser.set_defaults(func=upload)
 
     args = parser.parse_args()
@@ -53,11 +55,11 @@ def show_configuration_command(args):
 
 def upload(args):
     config = get_configuration()
-    if not config:
+    if not config and not args.csv:
         print('SQL connection not configured. Run `qe-sql set-config` to configure.')
     with open(args.file) as f:
         workflowresult = json.load(f)
-    send_workflowresult_to_sql(workflowresult)
+    send_workflowresult_to_sql(workflowresult, csv=args.csv, excel=args.excel)
 
 if __name__ == '__main__':
     parse_arguments()
