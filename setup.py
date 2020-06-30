@@ -22,6 +22,7 @@ setuptools.setup(
     install_requires=[
         'pandas',
         'sqlalchemy',
-        'flatten-json'
+        'flatten-json',
+        'openpyxl'
     ]
 )
