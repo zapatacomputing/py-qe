@@ -1,5 +1,5 @@
 import unittest
-from _pyqe import (extract_dataframes, get_super_dict, get_class_dict,
+from ._pyqe import (extract_dataframes, get_super_dict, get_class_dict,
     send_workflowresult_to_sql, extract_lists)
 import json
 
