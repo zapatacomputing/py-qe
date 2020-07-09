@@ -243,4 +243,4 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
     else:
         engine = create_engine(get_db_conn_str())
         for table_name in dfs:
-            dfs[table_name].to_sql(table_name, con=engine, if_exists="append")
+            dfs[table_name].to_sql(table_name[:63], con=engine, if_exists="append")
