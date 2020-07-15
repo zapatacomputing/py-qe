@@ -226,6 +226,14 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
                 df_to_write.to_excel(
                     writer, sheet_name=_compress_name(table_name), index=True
                 )
+            # Loop over sheets that are not in the current json
+            # Ensures they are also written to the new Excel file
+            compressed_table_names = [_compress_name(x) for x in dfs.keys()]
+            for sheet_name in excel_file.sheet_names:
+                if sheet_name not in compressed_table_names:
+                    transferred_df = excel_file.parse(sheet_name)
+                    transferred_df.set_index("_id", inplace=True)
+                    transferred_df.to_excel(writer, sheet_name=sheet_name, index=True)
     elif csv:
         if not os.path.isdir("./csv_data"):
             os.mkdir("./csv_data")
