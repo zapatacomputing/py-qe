@@ -3,7 +3,8 @@
 from pandas.io.json import json_normalize
 import pandas as pd
 from flatten_json import flatten
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.exc import ProgrammingError 
 import json
 from pyqe._sql import get_db_conn_str
 import os
@@ -263,4 +264,50 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
     else:
         engine = create_engine(get_db_conn_str())
         for table_name in dfs:
-            dfs[table_name].to_sql(_compress_name(table_name, max_len_postgres), con=engine, if_exists="append")
+            try:
+                dfs[table_name].to_sql(_compress_name(table_name, max_len_postgres), con=engine, if_exists="append")
+            except ProgrammingError as e:
+                if 'UndefinedColumn' in e.args[0]:
+                    # Since several columns may be missing, we iterate through all of them.
+                    md = MetaData()
+                    table = Table(table_name, md, autoload=True, autoload_with=engine)
+                    #existing_cols = engine.execute('PRAGMA table_info({})'.format(table_name))
+                    existing_cols = [x.name for x in table.c]
+                    found_missing_col = False
+                    for col in dfs[table_name].columns.values.tolist():
+                        if col not in existing_cols:
+                            found_missing_col = True
+                            col_type = dfs[table_name][col].dtypes.name
+                            col_type_as_str = pd._libs.lib.infer_dtype(dfs[table_name][col])
+                            print("Adding new column {} to table {}".format(col, table_name))
+                            sql_type = None
+                            # Type mapping based on pandas.io.sql.py _SQL_TYPES dictionary
+                            if 'int' in col_type:
+                                sql_type = 'INTEGER'
+                            elif 'float' in col_type:
+                                sql_type = 'REAL'
+                            elif 'bool' in col_type:
+                                sql_type = 'INTEGER'
+                            elif 'datetime' in col_type:
+                                sql_type = 'TIMESTAMP'
+                            elif 'date' in col_type:
+                                sql_type = 'DATE'
+                            elif 'time' in col_type:
+                                sql_type = 'TIME'
+                            elif 'object' in col_type or 'str' in col_type:
+                                sql_type = 'TEXT'
+                            else: 
+                                print("Defaulting to TEXT for SQL column type")
+                                sql_type = 'TEXT'
+                    
+                            engine.execute("ALTER TABLE \"%s\" ADD COLUMN \"%s\" %s" % (table_name, col, sql_type) )
+                        
+                    if not found_missing_col:
+                        print("Could not find missing column name")
+                        raise e
+
+                    # Now try adding the table again
+                    dfs[table_name].to_sql(_compress_name(table_name, max_len_postgres), con=engine, if_exists="append")
+                else:
+                    raise e
+
