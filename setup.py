@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/zapatacomputing/zmachine",
     packages=setuptools.find_packages(where='src/python'),
     package_dir={'' : 'src/python'},
-    scripts=['scripts/qe-sql'],
+    scripts=['scripts/transform-workflowresult'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
