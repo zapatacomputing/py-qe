@@ -1,6 +1,7 @@
+from ._pyqe import send_workflowresult_to_sql
+from ._sql import set_configuration, get_configuration
 import argparse
 import sys
-from pyqe import set_configuration, get_configuration, send_workflowresult_to_sql
 import json
 
 def parse_arguments():
@@ -60,6 +61,3 @@ def upload(args):
     with open(args.file) as f:
         workflowresult = json.load(f)
     send_workflowresult_to_sql(workflowresult, csv=args.csv, excel=args.excel)
-
-if __name__ == '__main__':
-    parse_arguments()
