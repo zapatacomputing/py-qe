@@ -243,6 +243,7 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
                         index=True,
                     )
             # Loop over sheets that are not in the current json
+            # if an excel file already exists
             # Ensures they are also written to the new Excel file
             compressed_table_names = [
                 _compress_name(x, max_len_excel) for x in dfs.keys()
@@ -252,6 +253,7 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
                     transferred_df = excel_file.parse(sheet_name)
                     transferred_df.set_index("_id", inplace=True)
                     transferred_df.to_excel(writer, sheet_name=sheet_name, index=True)
+
     elif csv:
         if not os.path.isdir("./csv_data"):
             os.mkdir("./csv_data")
