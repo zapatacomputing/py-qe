@@ -81,7 +81,7 @@ def show_configuration_command(args):
 def upload(args):
     config = get_configuration()
     if not config:
-        print("SQL connection not configured. Run `transform-workflowresult set-config` to configure.")
+        print("SQL connection not configured. Run `convert-workflowresult set-config` to configure.")
     with open(args.file) as f:
         workflowresult = json.load(f)
     send_workflowresult_to_sql(workflowresult)
