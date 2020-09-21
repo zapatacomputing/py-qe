@@ -166,7 +166,7 @@ def extract_dataframes(workflowresult):
     return dfs
 
 
-def _compress_name(original_name, length):
+def _compress_name(original_name: str, length: int) -> str:
     """Compresses a table name to less than length characters so that it is 
     suitable for Excel/Postgres limitations.
 
@@ -212,7 +212,7 @@ def export_to_csv(workflowresult):
         df_to_write.to_csv(filepath, index=True)
         print(f"Updated {filepath}")    
 
-def export_to_xlsx(workflowresult):
+def export_to_xlsx(workflowresult: dict):
     """Given a Quantum Engine workflowresult dict, unflatten it and 
     write or append results to an Excel file, using one worksheet per table.
                       
@@ -269,7 +269,7 @@ def export_to_xlsx(workflowresult):
 
         print(f"Updated {filepath}")
 
-def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
+def send_workflowresult_to_sql(workflowresult: dict):
     """Given a Quantum Engine workflowresult dict, flatten it and upload to a
     SQL database.
 
@@ -305,9 +305,6 @@ def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
                     if col not in existing_cols:
                         found_missing_col = True
                         col_type = dfs[table_name][col].dtypes.name
-                        col_type_as_str = pd._libs.lib.infer_dtype(
-                            dfs[table_name][col]
-                        )
                         print(
                             "Adding new column {} to table {}".format(
                                 col, _compress_name(table_name, max_len_postgres)

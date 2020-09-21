@@ -27,11 +27,11 @@ dataframes = extract_dataframes(workflow_result_dict)
 Workflow results can be exported to Excel (XLSX) or CSV using the `transform-workflowresult` command-line interface.
 
 ```bash
-transform-workflowresult export workflow-id --format xlsx
+transform-workflowresult export workflow_result.json --format xlsx
 ```
 or
 ```bash
-transform-workflowresult export workflow-id --format csv
+transform-workflowresult export workflow_result.json --format csv
 ```
 
 ## Uploading to PostgreSQL

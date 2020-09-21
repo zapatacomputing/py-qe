@@ -6,7 +6,7 @@ import json
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser = argparse.ArgumentParser(description="Convert workflow result.")
     subparsers = parser.add_subparsers(help="sub-command help")
     parser.set_defaults(func=None)
 
@@ -80,11 +80,11 @@ def show_configuration_command(args):
 
 def upload(args):
     config = get_configuration()
-    if not config and not args.csv:
-        print("SQL connection not configured. Run `qe-sql set-config` to configure.")
+    if not config:
+        print("SQL connection not configured. Run `transform-workflowresult set-config` to configure.")
     with open(args.file) as f:
         workflowresult = json.load(f)
-    send_workflowresult_to_sql(workflowresult, csv=args.csv, excel=args.excel)
+    send_workflowresult_to_sql(workflowresult)
 
 def export(args):
     with open(args.file) as f:
