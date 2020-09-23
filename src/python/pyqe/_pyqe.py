@@ -3,7 +3,8 @@
 from pandas.io.json import json_normalize
 import pandas as pd
 from flatten_json import flatten
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.exc import ProgrammingError
 import json
 from pyqe._sql import get_db_conn_str
 import os
@@ -165,90 +166,189 @@ def extract_dataframes(workflowresult):
     return dfs
 
 
-def _compress_name(original_name):
-    """Compresses a table name to less than 31 characters so that it is 
-    suitable for an Excel sheet.
+def _compress_name(original_name: str, length: int) -> str:
+    """Compresses a table name to less than length characters so that it is 
+    suitable for Excel/Postgres limitations.
 
     Args:
         original_name (str): The original table name to compress
+        length (int): The maximum length of a name
     Returns:
-        compressed_name (str): A new name that fits on 31 characters
+        compressed_name (str): A new name that fits the length
     """
 
-    if len(original_name) > 31:
+    if len(original_name) > length:
         compressed_name = re.sub("zapata-v1", "zv1", original_name)
     else:
         return original_name
 
-    if len(compressed_name) > 31:
+    if len(compressed_name) > length:
         compressed_name = re.sub("[aeiouy]", "", compressed_name)
-    if len(compressed_name) > 31:
-        compressed_name = compressed_name[:31]
+    if len(compressed_name) > length:
+        compressed_name = compressed_name[:length]
 
     return compressed_name
 
-
-def send_workflowresult_to_sql(workflowresult, csv=False, excel=False):
-    """Given a Quantum Engine workflowresult dict, flatten it and upload to a
-    SQL database.
-
+def export_to_csv(workflowresult):
+    """Given a Quantum Engine workflowresult dict, unflatten it and 
+    write to csv files, using one file per table.
+                      
     Args:
         workflowresult (dict): A Quantum Engine workflowresult dict.
-        csv (bool): If True, write or append results to csv files.
-        excel (bool): If True, write or append results to an Excel file,
-                      using one worksheet per table.
     """
 
-    if excel and csv:
-        print(
-            "Excel and csv exports both specified, only excel export will be performed."
-        )
+    dfs = extract_dataframes(workflowresult)
+    if not os.path.isdir("./csv_data"):
+        os.mkdir("./csv_data")
+    for table_name in dfs:
+        filepath = "./csv_data/" + table_name + ".csv"
+        if os.path.isfile(filepath):
+            old_df = pd.read_csv(filepath)
+            old_df.set_index("_id", inplace=True)
+            df_to_write = old_df.append(dfs[table_name], ignore_index=False)
+        else:
+            df_to_write = dfs[table_name]
+
+        df_to_write.to_csv(filepath, index=True)
+        print(f"Updated {filepath}")    
+
+def export_to_xlsx(workflowresult: dict):
+    """Given a Quantum Engine workflowresult dict, unflatten it and 
+    write or append results to an Excel file, using one worksheet per table.
+                      
+    Args:
+        workflowresult (dict): A Quantum Engine workflowresult dict.
+    """
 
     dfs = extract_dataframes(workflowresult)
-    if excel:
-        filepath = "./excel_data.xlsx"
-        with pd.ExcelWriter(filepath) as writer:
-            if os.path.isfile(filepath):
-                excel_file = pd.ExcelFile(filepath)
-            else:
-                excel_file = None
-            for table_name in dfs:
-                if (
-                    excel_file is not None
-                    and _compress_name(table_name) in excel_file.sheet_names
-                ):
-                    old_df = excel_file.parse(_compress_name(table_name))
-                    old_df.set_index("_id", inplace=True)
-                    df_to_write = old_df.append(dfs[table_name], ignore_index=False)
-                else:
-                    df_to_write = dfs[table_name]
 
-                # Excel only allows up to about a million rows...
-                if len(df_to_write.index) > 1048576:
-                    print(
-                        "Table {} has more than 1048576 rows and cannot be written to Excel worksheet: it has been dropped.".format(
-                            table_name
-                        )
-                    )
-                else:
-                    df_to_write.to_excel(
-                        writer, sheet_name=_compress_name(table_name), index=True
-                    )
-    elif csv:
-        if not os.path.isdir("./csv_data"):
-            os.mkdir("./csv_data")
+    max_len_excel = 31
+    filepath = "./excel_data.xlsx"
+    with pd.ExcelWriter(filepath) as writer:
+        if os.path.isfile(filepath):
+            excel_file = pd.ExcelFile(filepath)
+        else:
+            excel_file = None
         for table_name in dfs:
-            filepath = "./csv_data/" + table_name + ".csv"
-            if os.path.isfile(filepath):
-                old_df = pd.read_csv(filepath)
+            if (
+                excel_file is not None
+                and _compress_name(table_name, max_len_excel)
+                in excel_file.sheet_names
+            ):
+                old_df = excel_file.parse(_compress_name(table_name, max_len_excel))
                 old_df.set_index("_id", inplace=True)
                 df_to_write = old_df.append(dfs[table_name], ignore_index=False)
             else:
                 df_to_write = dfs[table_name]
 
-            df_to_write.to_csv(filepath, index=True)
+            # Excel only allows up to about a million rows...
+            if len(df_to_write.index) > 1048576:
+                print(
+                    "Table {} has more than 1048576 rows and cannot be written to Excel worksheet: it has been dropped.".format(
+                        table_name
+                    )
+                )
+            else:
+                df_to_write.to_excel(
+                    writer,
+                    sheet_name=_compress_name(table_name, max_len_excel),
+                    index=True,
+                )
+        # Loop over sheets that are not in the current json
+        # if an excel file already exists
+        # Ensures they are also written to the new Excel file
+        compressed_table_names = [
+            _compress_name(x, max_len_excel) for x in dfs.keys()
+        ]
+        if excel_file:
+            for sheet_name in excel_file.sheet_names:
+                if sheet_name not in compressed_table_names:
+                    transferred_df = excel_file.parse(sheet_name)
+                    transferred_df.set_index("_id", inplace=True)
+                    transferred_df.to_excel(writer, sheet_name=sheet_name, index=True)
 
-    else:
-        engine = create_engine(get_db_conn_str())
-        for table_name in dfs:
-            dfs[table_name].to_sql(table_name, con=engine, if_exists="append")
+        print(f"Updated {filepath}")
+
+def send_workflowresult_to_sql(workflowresult: dict):
+    """Given a Quantum Engine workflowresult dict, flatten it and upload to a
+    SQL database.
+
+    Args:
+        workflowresult (dict): A Quantum Engine workflowresult dict.
+    """
+    max_len_postgres = 63
+
+    dfs = extract_dataframes(workflowresult)
+
+    engine = create_engine(get_db_conn_str())
+    for table_name in dfs:
+        try:
+            dfs[table_name].to_sql(
+                _compress_name(table_name, max_len_postgres),
+                con=engine,
+                if_exists="append",
+            )
+        except ProgrammingError as e:
+            if "UndefinedColumn" in e.args[0]:
+                # Since several columns may be missing, we iterate through all of them.
+                md = MetaData()
+                table = Table(
+                    _compress_name(table_name, max_len_postgres),
+                    md,
+                    autoload=True,
+                    autoload_with=engine,
+                )
+                # existing_cols = engine.execute('PRAGMA table_info({})'.format(table_name))
+                existing_cols = [x.name for x in table.c]
+                found_missing_col = False
+                for col in dfs[table_name].columns.values.tolist():
+                    if col not in existing_cols:
+                        found_missing_col = True
+                        col_type = dfs[table_name][col].dtypes.name
+                        print(
+                            "Adding new column {} to table {}".format(
+                                col, _compress_name(table_name, max_len_postgres)
+                            )
+                        )
+                        sql_type = None
+                        # Type mapping based on pandas.io.sql.py _SQL_TYPES dictionary
+                        if "int" in col_type:
+                            sql_type = "INTEGER"
+                        elif "float" in col_type:
+                            sql_type = "REAL"
+                        elif "bool" in col_type:
+                            sql_type = "INTEGER"
+                        elif "datetime" in col_type:
+                            sql_type = "TIMESTAMP"
+                        elif "date" in col_type:
+                            sql_type = "DATE"
+                        elif "time" in col_type:
+                            sql_type = "TIME"
+                        elif "object" in col_type or "str" in col_type:
+                            sql_type = "TEXT"
+                        else:
+                            print("Defaulting to TEXT for SQL column type")
+                            sql_type = "TEXT"
+
+                        engine.execute(
+                            'ALTER TABLE "%s" ADD COLUMN "%s" %s'
+                            % (
+                                _compress_name(table_name, max_len_postgres),
+                                col,
+                                sql_type,
+                            )
+                        )
+
+                if not found_missing_col:
+                    print("Could not find missing column name")
+                    raise e
+
+                # Now try adding the table again
+                dfs[table_name].to_sql(
+                    _compress_name(table_name, max_len_postgres),
+                    con=engine,
+                    if_exists="append",
+                )
+            else:
+                raise e
+

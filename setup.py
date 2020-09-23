@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/zapatacomputing/zmachine",
     packages=setuptools.find_packages(where='src/python'),
     package_dir={'' : 'src/python'},
-    scripts=['scripts/qe-sql'],
+    scripts=['scripts/convert-workflowresult'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
@@ -22,7 +22,7 @@ setuptools.setup(
     install_requires=[
         'pandas',
         'sqlalchemy',
-        'flatten-json',
+        'flatten-json==0.1.7',
         'openpyxl'
     ]
 )
